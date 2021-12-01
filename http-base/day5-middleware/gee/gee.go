@@ -2,6 +2,7 @@ package gee
 
 import (
 	"net/http"
+	"strings"
 )
 
 type Engine struct {
@@ -11,10 +12,10 @@ type Engine struct {
 }
 
 type RouterGroup struct {
-	prefix     string
-	middleWare []HandlerFunc
-	parent     *RouterGroup
-	engine     *Engine
+	prefix      string
+	middleWares []HandlerFunc
+	parent      *RouterGroup
+	engine      *Engine
 }
 
 func New() *Engine {
@@ -44,7 +45,7 @@ func (group *RouterGroup) Group(prefix string) *RouterGroup {
 	engine := group.engine
 	newGroup := &RouterGroup{
 		prefix: group.prefix + prefix,
-		//middleWare: nil,
+		//middleWares: nil,
 		parent: group,
 		engine: engine,
 	}
@@ -64,11 +65,22 @@ func (group *RouterGroup) Post(param string, handler HandlerFunc) {
 	group.addRoute("POST", param, handler)
 }
 
+func (group *RouterGroup) Use(middleware HandlerFunc) {
+	group.middleWares = append(group.middleWares, middleware)
+}
+
 func (g *Engine) Run(port string) {
 	http.ListenAndServe(":"+port, g)
 }
 
 func (g *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	middleWares := make([]HandlerFunc, 0)
+	for _, group := range g.groups {
+		if strings.HasPrefix(r.URL.Path, group.prefix) {
+			middleWares = append(middleWares, group.middleWares...)
+		}
+	}
 	c := newContext(w, r)
+	c.handlers = middleWares
 	g.router.handle(c)
 }

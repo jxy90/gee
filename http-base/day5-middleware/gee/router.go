@@ -74,11 +74,15 @@ func (r *router) handle(c *Context) {
 	if node != nil {
 		c.Params = params
 		key := c.Method + "-" + node.pattern
-		r.handlers[key](c)
+		//r.handlers[key](c)
+		c.handlers = append(c.handlers, r.handlers[key])
 	} else {
 		c.Status(http.StatusNotFound)
-		fmt.Fprintf(c.Writer, "404 Not Found %v \n", c.Path)
+		c.handlers = append(c.handlers, func(c *Context) {
+			fmt.Fprintf(c.Writer, "404 Not Found %v \n", c.Path)
+		})
 	}
+	c.Next()
 	//key := c.Method + "-" + c.Path
 	//if handler, ok := r.handlers[key]; ok {
 	//	handler(c)
