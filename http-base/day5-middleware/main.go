@@ -11,10 +11,10 @@ import (
 func onlyForV2() gee.HandlerFunc {
 	return func(c *gee.Context) {
 		t := time.Now()
-		log.Printf("v2 only part1 statusCode:%v URI:%v time:%v", c.StatusCode, c.Req.RequestURI, time.Since(t))
+		log.Printf("part1 statusCode:%v URI:%v time:%v v2 only ", c.StatusCode, c.Req.RequestURI, time.Since(t))
 		c.Next()
 		//c.String(500, "500 error")
-		log.Printf("v2 only part2 statusCode:%v URI:%v time:%v", c.StatusCode, c.Req.RequestURI, time.Since(t))
+		log.Printf("part2 statusCode:%v URI:%v time:%v v2 only ", c.StatusCode, c.Req.RequestURI, time.Since(t))
 	}
 }
 
