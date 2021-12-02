@@ -1,6 +1,7 @@
 package gee
 
 import (
+	"html/template"
 	"net/http"
 	"strings"
 )
@@ -9,6 +10,9 @@ type Engine struct {
 	*RouterGroup
 	router *router
 	groups []*RouterGroup
+	//html template
+	htmlTemplates *template.Template
+	funcMap       template.FuncMap
 }
 
 type RouterGroup struct {
@@ -30,15 +34,23 @@ func New() *Engine {
 	return engine
 }
 
-func (g *Engine) addRoute(method, param string, handler HandlerFunc) {
-	g.router.addRoute(method, param, handler)
+func (engine *Engine) SetFuncMap(funcMap template.FuncMap) {
+	engine.funcMap = funcMap
 }
 
-func (g *Engine) Get(param string, handler HandlerFunc) {
-	g.addRoute("GET", param, handler)
+func (engine *Engine) LoadHTMLGlob(pattern string) {
+	engine.htmlTemplates = template.Must(template.New("").Funcs(engine.funcMap).ParseGlob(pattern))
 }
-func (g *Engine) Post(param string, handler HandlerFunc) {
-	g.addRoute("POST", param, handler)
+
+func (engine *Engine) addRoute(method, param string, handler HandlerFunc) {
+	engine.router.addRoute(method, param, handler)
+}
+
+func (engine *Engine) Get(param string, handler HandlerFunc) {
+	engine.addRoute("GET", param, handler)
+}
+func (engine *Engine) Post(param string, handler HandlerFunc) {
+	engine.addRoute("POST", param, handler)
 }
 
 func (group *RouterGroup) Group(prefix string) *RouterGroup {
@@ -69,18 +81,19 @@ func (group *RouterGroup) Use(middleware HandlerFunc) {
 	group.middleWares = append(group.middleWares, middleware)
 }
 
-func (g *Engine) Run(port string) {
-	http.ListenAndServe(":"+port, g)
+func (engine *Engine) Run(port string) {
+	http.ListenAndServe(":"+port, engine)
 }
 
-func (g *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	middleWares := make([]HandlerFunc, 0)
-	for _, group := range g.groups {
+	for _, group := range engine.groups {
 		if strings.HasPrefix(r.URL.Path, group.prefix) {
 			middleWares = append(middleWares, group.middleWares...)
 		}
 	}
 	c := newContext(w, r)
 	c.handlers = middleWares
-	g.router.handle(c)
+	c.engine = engine
+	engine.router.handle(c)
 }

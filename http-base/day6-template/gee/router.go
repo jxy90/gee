@@ -3,6 +3,7 @@ package gee
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 )
 
@@ -90,4 +91,23 @@ func (r *router) handle(c *Context) {
 	//	c.Status(http.StatusNotFound)
 	//	fmt.Fprintf(c.Writer, "404 Not Found %v \n", key)
 	//}
+}
+
+func (group *RouterGroup) createStaticHandler(relativePath string, fs http.FileSystem) HandlerFunc {
+	absolutePath := path.Join(group.prefix, relativePath)
+	fileServer := http.StripPrefix(absolutePath, http.FileServer(fs))
+	return func(c *Context) {
+		file := c.Param("filePath")
+		if _, err := fs.Open(file); err != nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		fileServer.ServeHTTP(c.Writer, c.Req)
+	}
+}
+
+func (group *RouterGroup) Static(relativePath string, root string) {
+	handler := group.createStaticHandler(relativePath, http.Dir(root))
+	urlPath := path.Join(relativePath, "/*filePath")
+	group.Get(urlPath, handler)
 }
