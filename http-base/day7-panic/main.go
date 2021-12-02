@@ -36,9 +36,13 @@ func main() {
 		c.String(http.StatusOK, "Hello Geektutu\n")
 	})
 	r.Get("/panic", func(c *gee.Context) {
-		names := []string{"12"}
-		c.String(http.StatusOK, names[1])
+		panic(c)
 	})
 
 	r.Run("9999")
+}
+
+func panic(c *gee.Context) {
+	names := []string{"12"}
+	c.String(http.StatusOK, names[1])
 }
